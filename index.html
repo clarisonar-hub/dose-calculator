@@ -2,26 +2,33 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>BotVendedor Web - Dashboard Completo</title>
+<title>Dose Calculator</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body { font-family: Arial, sans-serif; margin:20px; background:#f9f9f9;}
-h1,h2,h3 { color:#333; }
-textarea { width:100%; height:200px; }
-button { padding:10px 20px; margin:10px 5px 10px 0; }
-table { width:100%; border-collapse: collapse; margin-top:10px;}
-th, td { border:1px solid #ccc; padding:8px; text-align:left; }
-th { background:#eee; }
+/* ================= Tema Futurista ================= */
+body {
+    font-family: 'Orbitron', sans-serif;
+    margin: 20px;
+    background: #0b0c10;
+    color: #c5c6c7;
+}
+h1,h2,h3 { color:#66fcf1; text-shadow:0 0 5px #45a29e; }
+textarea { width:100%; height:200px; background:#1f2833; color:#c5c6c7; border:1px solid #45a29e; padding:10px; font-family: 'Courier New', monospace; }
+button { padding:10px 20px; margin:10px 5px 10px 0; border:none; background:#45a29e; color:#0b0c10; cursor:pointer; font-weight:bold; transition:0.3s; }
+button:hover { background:#66fcf1; color:#0b0c10; }
+table { width:100%; border-collapse: collapse; margin-top:10px; background:#1f2833; color:#c5c6c7; }
+th, td { border:1px solid #45a29e; padding:8px; text-align:left; }
+th { background:#0b0c10; color:#66fcf1; }
 .container { max-width:1200px; margin:auto; }
-.expander { background:#ddd; padding:5px; margin-top:5px; cursor:pointer; }
+.expander { background:#1f2833; padding:5px; margin-top:5px; cursor:pointer; border:1px solid #45a29e; }
 .hidden { display:none; }
-canvas { background:#fff; margin-top:20px; padding:10px; border:1px solid #ccc;}
+canvas { background:#1f2833; margin-top:20px; padding:10px; border:1px solid #45a29e; }
 </style>
 </head>
 <body>
 <div class="container">
-<h1>BotVendedor Web - Dashboard Completo</h1>
-<p>Cole o texto dos pedidos do WhatsApp (o total enviado será ignorado):</p>
+<h1>Dose Calculator - Dashboard Futurista</h1>
+<p>Cole os pedidos do WhatsApp abaixo (os totais enviados serão ignorados):</p>
 <textarea id="pedidoTexto"></textarea><br>
 <button onclick="processarPedidos()">Processar Pedidos</button>
 <button onclick="exportCSV()">Exportar CSV</button>
@@ -55,264 +62,235 @@ const catalog = [
 {name:"agua 500 ml", price:5.0, cost:2.0, bot:1.0}
 ];
 
-let pedidosProcessados = [];
+let dosePedidosProcessados = [];
 let chartProdutos, chartBots, chartLucroLoja;
 
 function normalize(text){
-return text.toLowerCase()
-.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-.trim();
+    return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
 }
 
-// ---------------- Parse Pedidos ----------------
 function parsePedidos(text) {
-const lines = text.split("\n").map(l => l.trim()).filter(l => l);
-const pedidos = [];
-let cur = null;
+    const lines = text.split("\n").map(l => l.trim()).filter(l => l);
+    const pedidos = [];
+    let cur = null;
 
-const startNew = () => {
-if(cur) pedidos.push(cur);
-cur = {id:"", origin:"", customer:"", address:"", payment:"", items:[], note:""};
-};
+    const startNew = () => {
+        if(cur) pedidos.push(cur);
+        cur = {id:"", origin:"", customer:"", address:"", payment:"", items:[], note:""};
+    };
 
-for(let l of lines){
-if(l.includes("📦") || l.toLowerCase().startsWith("id:")) if(!cur) startNew();
-if(!cur) continue;
+    for(let l of lines){
+        if(l.includes("📦") || l.toLowerCase().startsWith("id:")) if(!cur) startNew();
+        if(!cur) continue;
 
-let m;
-m = l.match(/ID\s*:\s*([A-Za-z0-9\-\_]+)/i); if(m) cur.id=m[1].trim();
-m = l.match(/origem\s*:\s*(\S+)/i); if(m) cur.origin=m[1].trim();
-m = l.match(/cliente\s*:\s*(.+)/i); if(m) cur.customer=m[1].trim();
-m = l.match(/end[eê]re[cç]o\s*:\s*(.+)/i); if(m) cur.address=m[1].trim();
-m = l.match(/pagamento\s*:\s*(.+)/i); if(m) cur.payment=m[1].trim();
-m = l.match(/obs\s*:\s*(.+)/i); if(m) cur.note=m[1].trim();
+        let m;
+        m = l.match(/ID\s*:\s*([A-Za-z0-9\-\_]+)/i); if(m) cur.id=m[1].trim();
+        m = l.match(/origem\s*:\s*(\S+)/i); if(m) cur.origin=m[1].trim();
+        m = l.match(/cliente\s*:\s*(.+)/i); if(m) cur.customer=m[1].trim();
+        m = l.match(/end[eê]re[cç]o\s*:\s*(.+)/i); if(m) cur.address=m[1].trim();
+        m = l.match(/pagamento\s*:\s*(.+)/i); if(m) cur.payment=m[1].trim();
+        m = l.match(/obs\s*:\s*(.+)/i); if(m) cur.note=m[1].trim();
 
-const regexItem = /(\d+)x\s+([^\(]+)/g;
-let match;
-while((match = regexItem.exec(l)) !== null){
-cur.items.push({
-name: normalize(match[2]),
-qty: parseInt(match[1])
-});
+        const regexItem = /(\d+)x\s+([^\(]+)/g;
+        let match;
+        while((match = regexItem.exec(l)) !== null){
+            cur.items.push({
+                name: normalize(match[2]),
+                qty: parseInt(match[1])
+            });
+        }
+    }
+    if(cur) pedidos.push(cur);
+    return pedidos;
 }
-}
-if(cur) pedidos.push(cur);
-return pedidos;
-}
 
-// ---------------- Calcular Pedidos ----------------
 function calcularPedidos(pedidos){
-const results = [];
-for(let o of pedidos){
-let total_venda=0, total_custo=0, total_bot=0, items_list=[];
-for(let it of o.items){
-const found = catalog.find(c => normalize(c.name) === it.name);
-if(!found) continue;
+    const results = [];
+    for(let o of pedidos){
+        let total_venda=0, total_custo=0, total_bot=0, items_list=[];
+        for(let it of o.items){
+            const found = catalog.find(c => normalize(c.name) === it.name);
+            if(!found) continue;
 
-const price = found.price * it.qty;
-const cost = found.cost * it.qty;
-const bot = found.bot * it.qty;
+            const price = found.price * it.qty;
+            const cost = found.cost * it.qty;
+            const bot = found.bot * it.qty;
 
-total_venda += price;
-total_custo += cost;
-total_bot += bot;
+            total_venda += price;
+            total_custo += cost;
+            total_bot += bot;
 
-items_list.push({
-name: it.name,
-qty: it.qty,
-price: price,
-cost: found.cost,
-bot: found.bot
-});
+            items_list.push({
+                name: it.name,
+                qty: it.qty,
+                price: price,
+                cost: found.cost,
+                bot: found.bot
+            });
+        }
+
+        const lucro_bruto = total_venda - total_custo;
+        const lucro_loja = lucro_bruto - total_bot;
+
+        const perc_bot = total_venda > 0 ? (total_bot / total_venda) * 100 : 0;
+        const perc_loja = total_venda > 0 ? (lucro_loja / total_venda) * 100 : 0;
+
+        results.push({
+            ...o,
+            items: items_list,
+            total_venda,
+            total_custo,
+            total_bot,
+            lucro_bruto,
+            lucro_loja,
+            perc_bot,
+            perc_loja
+        });
+    }
+    return results;
 }
 
-const lucro_bruto = total_venda - total_custo;
-const lucro_loja = lucro_bruto - total_bot;
-
-const perc_bot = total_venda > 0 ? (total_bot / total_venda) * 100 : 0;
-const perc_loja = total_venda > 0 ? (lucro_loja / total_venda) * 100 : 0;
-
-results.push({
-...o,
-items: items_list,
-total_venda,
-total_custo,
-total_bot,
-lucro_bruto,
-lucro_loja,
-perc_bot,
-perc_loja
-});
-}
-return results;
-}
-
-// ---------------- Mostrar Tabelas ----------------
 function mostrarResumo(){
-const tabela = document.getElementById("tabelaResumo");
-tabela.innerHTML = "";
-let html = "<table><tr><th>ID</th><th>Cliente</th><th>Origem</th><th>Total Venda</th><th>Custo</th><th>Bot</th><th>% Bot</th><th>Lucro Loja</th><th>% Loja</th></tr>";
-for(let p of pedidosProcessados){
-html += `<tr>
-<td>${p.id}</td>
-<td>${p.customer}</td>
-<td>${p.origin}</td>
-<td>${p.total_venda.toFixed(2)}</td>
-<td>${p.total_custo.toFixed(2)}</td>
-<td>${p.total_bot.toFixed(2)}</td>
-<td>${p.perc_bot.toFixed(1)}%</td>
-<td>${p.lucro_loja.toFixed(2)}</td>
-<td>${p.perc_loja.toFixed(1)}%</td>
-</tr>`;
-}
-html += "</table>";
-tabela.innerHTML = html;
+    const tabela = document.getElementById("tabelaResumo");
+    tabela.innerHTML = "";
+    let html = "<table><tr><th>ID</th><th>Cliente</th><th>Origem</th><th>Total Venda</th><th>Custo</th><th>Bot</th><th>% Bot</th><th>Lucro Loja</th><th>% Loja</th></tr>";
+    for(let p of dosePedidosProcessados){
+        html += `<tr>
+        <td>${p.id}</td>
+        <td>${p.customer}</td>
+        <td>${p.origin}</td>
+        <td>${p.total_venda.toFixed(2)}</td>
+        <td>${p.total_custo.toFixed(2)}</td>
+        <td>${p.total_bot.toFixed(2)}</td>
+        <td>${p.perc_bot.toFixed(1)}%</td>
+        <td>${p.lucro_loja.toFixed(2)}</td>
+        <td>${p.perc_loja.toFixed(1)}%</td>
+        </tr>`;
+    }
+    html += "</table>";
+    tabela.innerHTML = html;
 }
 
 function mostrarDetalhes(){
-const div = document.getElementById("detalhesPedidos");
-div.innerHTML = "";
-pedidosProcessados.forEach(p=>{
-let exp = document.createElement("div");
-exp.innerHTML = `<div class="expander">Pedido ${p.id} - ${p.customer}</div>`;
-let content = document.createElement("div");
-content.className = "hidden";
-let html = "<table><tr><th>Item</th><th>Qtd</th><th>Preço Total</th><th>Custo Unitário</th><th>Bot Unitário</th></tr>";
-for(let it of p.items){
-html += `<tr><td>${it.name}</td><td>${it.qty}</td><td>${it.price.toFixed(2)}</td><td>${it.cost.toFixed(2)}</td><td>${it.bot.toFixed(2)}</td></tr>`;
-}
-html += "</table>";
-content.innerHTML = html;
-exp.appendChild(content);
-exp.querySelector(".expander").onclick = ()=>{content.classList.toggle("hidden");};
-div.appendChild(exp);
-});
+    const div = document.getElementById("detalhesPedidos");
+    div.innerHTML = "";
+    dosePedidosProcessados.forEach(p=>{
+        let exp = document.createElement("div");
+        exp.innerHTML = `<div class="expander">Pedido ${p.id} - ${p.customer}</div>`;
+        let content = document.createElement("div");
+        content.className = "hidden";
+        let html = "<table><tr><th>Item</th><th>Qtd</th><th>Preço Total</th><th>Custo Unitário</th><th>Bot Unitário</th></tr>";
+        for(let it of p.items){
+            html += `<tr><td>${it.name}</td><td>${it.qty}</td><td>${it.price.toFixed(2)}</td><td>${it.cost.toFixed(2)}</td><td>${it.bot.toFixed(2)}</td></tr>`;
+        }
+        html += "</table>";
+        content.innerHTML = html;
+        exp.appendChild(content);
+        exp.querySelector(".expander").onclick = ()=>{content.classList.toggle("hidden");};
+        div.appendChild(exp);
+    });
 }
 
-// ---------------- Relatório Agregado ----------------
 function gerarRelatorioAgregado(){
-const agreg = {};
-pedidosProcessados.forEach(p=>{
-p.items.forEach(it=>{
-if(!agreg[it.name]) agreg[it.name] = {qty:0, total_venda:0, total_bot:0, total_loja:0};
-agreg[it.name].qty += it.qty;
-agreg[it.name].total_venda += it.price;
-agreg[it.name].total_bot += it.bot * it.qty;
-agreg[it.name].total_loja += it.price - it.cost*it.qty - it.bot*it.qty;
-});
-});
-let html = "<table><tr><th>Produto</th><th>Qtd Total</th><th>Total Venda</th><th>Total Bot</th><th>% Bot</th><th>Lucro Loja</th><th>% Loja</th></tr>";
-for(const k in agreg){
-const v = agreg[k];
-const perc_bot = v.total_venda>0 ? (v.total_bot/v.total_venda)*100 : 0;
-const perc_loja = v.total_venda>0 ? (v.total_loja/v.total_venda)*100 : 0;
-html += `<tr><td>${k}</td><td>${v.qty}</td><td>${v.total_venda.toFixed(2)}</td><td>${v.total_bot.toFixed(2)}</td><td>${perc_bot.toFixed(1)}%</td><td>${v.total_loja.toFixed(2)}</td><td>${perc_loja.toFixed(1)}%</td></tr>`;
+    const agreg = {};
+    dosePedidosProcessados.forEach(p=>{
+        p.items.forEach(it=>{
+            if(!agreg[it.name]) agreg[it.name] = {qty:0, total_venda:0, total_bot:0, total_loja:0};
+            agreg[it.name].qty += it.qty;
+            agreg[it.name].total_venda += it.price;
+            agreg[it.name].total_bot += it.bot * it.qty;
+            agreg[it.name].total_loja += it.price - it.cost*it.qty - it.bot*it.qty;
+        });
+    });
+    let html = "<table><tr><th>Produto</th><th>Qtd Total</th><th>Total Venda</th><th>Total Bot</th><th>% Bot</th><th>Lucro Loja</th><th>% Loja</th></tr>";
+    for(const k in agreg){
+        const v = agreg[k];
+        const perc_bot = v.total_venda>0 ? (v.total_bot/v.total_venda)*100 : 0;
+        const perc_loja = v.total_venda>0 ? (v.total_loja/v.total_venda)*100 : 0;
+        html += `<tr><td>${k}</td><td>${v.qty}</td><td>${v.total_venda.toFixed(2)}</td><td>${v.total_bot.toFixed(2)}</td><td>${perc_bot.toFixed(1)}%</td><td>${v.total_loja.toFixed(2)}</td><td>${perc_loja.toFixed(1)}%</td></tr>`;
+    }
+    html += "</table>";
+    document.getElementById("relatorioAgregado").innerHTML = html;
+
+    // Charts
+    const labels = Object.keys(agreg);
+    const dataVendas = labels.map(l => agreg[l].total_venda);
+    if(chartProdutos) chartProdutos.destroy();
+    chartProdutos = new Chart(document.getElementById("chartProdutos"), {
+        type: 'bar',
+        data: { labels, datasets:[{label:'Total Venda por Produto', data:dataVendas, backgroundColor:'rgba(102,252,241,0.6)'}] },
+        options: { responsive:true, plugins:{legend:{display:true}} }
+    });
+
+    const dataLucro = labels.map(l => agreg[l].total_loja);
+    if(chartLucroLoja) chartLucroLoja.destroy();
+    chartLucroLoja = new Chart(document.getElementById("chartLucroLoja"), {
+        type: 'bar',
+        data: { labels, datasets:[{label:'Lucro Loja por Produto', data:dataLucro, backgroundColor:'rgba(75,192,192,0.6)'}] },
+        options: { responsive:true, plugins:{legend:{display:true}} }
+    });
 }
-html += "</table>";
-document.getElementById("relatorioAgregado").innerHTML = html;
 
-// ---------- Chart Produtos ----------
-const labels = Object.keys(agreg);
-const dataVendas = labels.map(l => agreg[l].total_venda);
-if(chartProdutos) chartProdutos.destroy();
-chartProdutos = new Chart(document.getElementById("chartProdutos"), {
-type: 'bar',
-data: { labels, datasets:[{label:'Total Venda por Produto', data:dataVendas, backgroundColor:'rgba(54,162,235,0.5)'}] },
-options: { responsive:true, plugins:{legend:{display:true}} }
-});
-
-// ---------- Chart Lucro Loja ----------
-const dataLucro = labels.map(l => agreg[l].total_loja);
-if(chartLucroLoja) chartLucroLoja.destroy();
-chartLucroLoja = new Chart(document.getElementById("chartLucroLoja"), {
-type: 'bar',
-data: { labels, datasets:[{label:'Lucro Loja por Produto', data:dataLucro, backgroundColor:'rgba(75,192,192,0.5)'}] },
-options: { responsive:true, plugins:{legend:{display:true}} }
-});
-}
-
-// ---------------- Menu Valores por Bot ----------------
 function gerarMenuBot(){
-const botMap = {};
-pedidosProcessados.forEach(p=>{
-const bot = p.origin || "Desconhecido";
-if(!botMap[bot]) botMap[bot] = {};
-p.items.forEach(it=>{
-if(!botMap[bot][it.name]) botMap[bot][it.name] = 0;
-botMap[bot][it.name] += it.bot * it.qty;
-});
-});
-let html = "";
-const labels = [], data = [];
-for(const bot in botMap){
-html += `<h3>Bot: ${bot}</h3><table><tr><th>Produto</th><th>Valor Recebido (R$)</th></tr>`;
-for(const prod in botMap[bot]){
-html += `<tr><td>${prod}</td><td>${botMap[bot][prod].toFixed(2)}</td></tr>`;
-labels.push(bot + " - " + prod);
-data.push(botMap[bot][prod]);
-}
-html += "</table>";
-}
-document.getElementById("menuBot").innerHTML = html;
-
-// ---------- Chart Bots ----------
-if(chartBots) chartBots.destroy();
-chartBots = new Chart(document.getElementById("chartBots"), {
-type: 'bar',
-data: { labels, datasets:[{label:'Valor Recebido por Bot', data:data, backgroundColor:'rgba(255,159,64,0.5)'}] },
-options: { responsive:true, plugins:{legend:{display:true}} }
-});
-
-// ---------- Totais Gerais ----------
-let total_venda = 0, total_custo=0, total_bot=0, total_loja=0;
-pedidosProcessados.forEach(p=>{
-total_venda += p.total_venda;
-total_custo += p.total_custo;
-total_bot += p.total_bot;
-total_loja += p.lucro_loja;
-});
-console.log(`Total Venda: ${total_venda}, Custo: ${total_custo}, Bot: ${total_bot}, Lucro Loja: ${total_loja}`);
+    const botMap = {};
+    dosePedidosProcessados.forEach(p=>{
+        const bot = p.origin || "Desconhecido";
+        if(!botMap[bot]) botMap[bot] = {};
+        p.items.forEach(it=>{
+            if(!botMap[bot][it.name]) botMap[bot][it.name] = 0;
+            botMap[bot][it.name] += it.bot * it.qty;
+        });
+    });
+    let html = "";
+    const labels = [], data = [];
+    for(const bot in botMap){
+        html += `<h3>Bot: ${bot}</h3><table><tr><th>Produto</th><th>Valor Recebido (R$)</th></tr>`;
+        for(const prod in botMap[bot]){
+            html += `<tr><td>${prod}</td><td>${botMap[bot][prod].toFixed(2)}</td></tr>`;
+        }
+        html += "</table>";
+    }
+    document.getElementById("menuBot").innerHTML = html;
 }
 
-// ---------------- Botões ----------------
 function processarPedidos(){
-const texto = document.getElementById("pedidoTexto").value;
-if(!texto.trim()){ alert("Cole o texto dos pedidos."); return; }
-const pedidos = parsePedidos(texto);
-pedidosProcessados = calcularPedidos(pedidos);
-mostrarResumo();
-mostrarDetalhes();
-gerarRelatorioAgregado();
-gerarMenuBot();
+    const text = document.getElementById("pedidoTexto").value;
+    const pedidos = parsePedidos(text);
+    dosePedidosProcessados = calcularPedidos(pedidos);
+    mostrarResumo();
+    mostrarDetalhes();
+    gerarRelatorioAgregado();
+    gerarMenuBot();
+    alert("Pedidos processados com sucesso!");
 }
 
 function exportCSV(){
-if(pedidosProcessados.length==0){ alert("Processar pedidos primeiro."); return; }
-let csv = "ID,Cliente,Origem,Total Venda,Custo,Bot,% Bot,Lucro Loja,% Loja\n";
-pedidosProcessados.forEach(p=>{
-csv += `${p.id},${p.customer},${p.origin},${p.total_venda.toFixed(2)},${p.total_custo.toFixed(2)},${p.total_bot.toFixed(2)},${p.perc_bot.toFixed(1)}%,${p.lucro_loja.toFixed(2)},${p.perc_loja.toFixed(1)}%\n`;
-});
-const blob = new Blob([csv], {type:"text/csv"});
-const a = document.createElement("a");
-a.href = URL.createObjectURL(blob);
-a.download = "resumo_pedidos.csv";
-a.click();
+    if(dosePedidosProcessados.length===0){alert("Sem pedidos processados."); return;}
+    let csv = "ID,Cliente,Origem,Total Venda,Custo,Bot,% Bot,Lucro Loja,% Loja\n";
+    dosePedidosProcessados.forEach(p=>{
+        csv += `${p.id},${p.customer},${p.origin},${p.total_venda.toFixed(2)},${p.total_custo.toFixed(2)},${p.total_bot.toFixed(2)},${p.perc_bot.toFixed(1)}%,${p.lucro_loja.toFixed(2)},${p.perc_loja.toFixed(1)}%\n`;
+    });
+    const blob = new Blob([csv], {type:"text/csv"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "dose_calculator_resumo.csv";
+    a.click();
 }
 
 function salvarLocal(){
-localStorage.setItem("pedidosProcessados", JSON.stringify(pedidosProcessados));
-alert("Pedidos salvos localmente!");
+    localStorage.setItem("dosePedidosProcessados", JSON.stringify(dosePedidosProcessados));
+    alert("Pedidos salvos localmente!");
 }
 
 function carregarLocal(){
-const data = localStorage.getItem("pedidosProcessados");
-if(!data){ alert("Nenhum pedido salvo localmente."); return; }
-pedidosProcessados = JSON.parse(data);
-mostrarResumo();
-mostrarDetalhes();
-gerarRelatorioAgregado();
-gerarMenuBot();
-alert("Pedidos carregados com sucesso!");
+    const data = localStorage.getItem("dosePedidosProcessados");
+    if(!data){ alert("Nenhum pedido salvo localmente."); return; }
+    dosePedidosProcessados = JSON.parse(data);
+    mostrarResumo();
+    mostrarDetalhes();
+    gerarRelatorioAgregado();
+    gerarMenuBot();
+    alert("Pedidos carregados com sucesso!");
 }
 </script>
 </body>
